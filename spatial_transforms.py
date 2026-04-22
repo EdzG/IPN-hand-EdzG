@@ -114,6 +114,7 @@ class Normalize(object):
         Returns:
             Tensor: Normalized image.
         """
+     
         # TODO: make efficient
         for t, m, s in zip(tensor, self.mean, self.std):
             t.sub_(m).div_(s)

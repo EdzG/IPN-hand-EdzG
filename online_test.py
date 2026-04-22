@@ -6,7 +6,7 @@ import sys
 import json
 import shutil
 import itertools
-import numpy as np
+#Delete import numpy as np because it is a duplicate
 import pandas as pd 
 import csv
 import torch
@@ -26,11 +26,16 @@ from utils import Logger, AverageMeter, LevenshteinDistance, Queue
 
 import pdb
 import numpy as np
+import numpy
+# This tells PyTorch to trust the numpy data inside your .pth files
+#torch.serialization.add_safe_globals([numpy.core.multiarray.scalar])
 
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
 import scipy.io as sio
 
+# EG
+from pathlib import Path
 
 def weighting_func(x):
     return (1 / (1 + np.exp(-0.2*(x-9))))
@@ -39,6 +44,7 @@ def weighting_func(x):
 opt = parse_opts_online()
 
 def load_models(opt):
+    root = Path(opt.root_path)
     opt.resume_path = opt.resume_path_det
     opt.pretrain_path = opt.pretrain_path_det
     opt.sample_duration = opt.sample_duration_det
@@ -51,13 +57,13 @@ def load_models(opt):
     opt.no_first_lay = opt.no_first_lay_det
 
     if opt.root_path != '':
-        opt.video_path = os.path.join(opt.root_path, opt.video_path)
-        opt.annotation_path = os.path.join(opt.root_path, opt.annotation_path)
-        opt.result_path = os.path.join(opt.root_path, opt.result_path)
+        opt.video_path = root / opt.video_path
+        opt.annotation_path = root / opt.annotation_path
+        opt.result_path = root / opt.result_path
         if opt.resume_path:
-            opt.resume_path = os.path.join(opt.root_path, opt.resume_path)
+            opt.resume_path = root / opt.resume_path
         if opt.pretrain_path:
-            opt.pretrain_path = os.path.join(opt.root_path, opt.pretrain_path)
+            opt.pretrain_path = root / opt.pretrain_path 
 
 
     opt.scales = [opt.initial_scale]
@@ -68,7 +74,10 @@ def load_models(opt):
     opt.std = get_std(opt.norm_value)
 
     print(opt)
-    with open(os.path.join(opt.result_path, 'opts_det_{}.json'.format(opt.store_name)), 'w') as opt_file:
+
+    result_dir = Path(opt.result_path)
+    file_path = result_dir / f"opts_det_{opt.store_name}.json"
+    with open(file_path, 'w') as opt_file: 
         json.dump(vars(opt), opt_file)
 
     torch.manual_seed(opt.manual_seed)
@@ -76,9 +85,10 @@ def load_models(opt):
     detector, parameters = generate_model(opt)
 
     if opt.resume_path:
-        opt.resume_path = os.path.join(opt.root_path, opt.resume_path)
-        print('loading checkpoint {}'.format(opt.resume_path))
-        checkpoint = torch.load(opt.resume_path)
+        opt.resume_path = root / opt.resume_path
+        print(f"loading checkpoint {opt.resume_path}")
+        #potential need for refactoring
+        checkpoint = torch.load(opt.resume_path, weights_only=False)
         assert opt.arch == checkpoint['arch']
 
         detector.load_state_dict(checkpoint['state_dict'])
@@ -101,13 +111,13 @@ def load_models(opt):
     opt.no_first_lay = opt.no_first_lay_clf
 
     if opt.root_path != '':
-        opt.video_path = os.path.join(opt.root_path, opt.video_path)
-        opt.annotation_path = os.path.join(opt.root_path, opt.annotation_path)
-        opt.result_path = os.path.join(opt.root_path, opt.result_path)
+        opt.video_path = root / opt.video_path
+        opt.annotation_path = root / opt.annotation_path
+        opt.result_path = root / opt.result_path
         if opt.resume_path:
-            opt.resume_path = os.path.join(opt.root_path, opt.resume_path)
+            opt.resume_path = root / opt.resume_path 
         if opt.pretrain_path:
-            opt.pretrain_path = os.path.join(opt.root_path, opt.pretrain_path)
+            opt.pretrain_path = root / opt.pretrain_path
 
     opt.scales = [opt.initial_scale]
     for i in range(1, opt.n_scales):
@@ -125,7 +135,7 @@ def load_models(opt):
 
     if opt.resume_path:
         print('loading checkpoint {}'.format(opt.resume_path))
-        checkpoint = torch.load(opt.resume_path)
+        checkpoint = torch.load(opt.resume_path, weights_only=False)
         assert opt.arch == checkpoint['arch']
         if opt.sample_duration_clf < 32 and opt.model_clf != 'c3d':
             classifier = _modify_first_conv_layer(classifier,3,3)
@@ -184,7 +194,7 @@ elif opt.dataset == 'ipn':
     buf = 0
     with open(file_set,'rb') as f:
         for line in f:
-            vid_name = line.decode().split('\t')[0]
+            vid_name = line.decode().strip().split('\t')[0]
             test_paths.append(os.path.join(opt.video_path, 'frames', vid_name))
 elif opt.dataset == 'AHG':
     data = sio.loadmat(os.path.join(opt.root_path,'bega/datasets/AHG/splitfiles/testlist01.mat'))['raw_list'][0]
@@ -284,7 +294,8 @@ for idx, path in enumerate(test_paths[buf:]):
 
     for i, (inputs, targets) in enumerate(test_loader):
         if not opt.no_cuda:
-            targets = targets.cuda(async=True)
+            #changing async to non_blocking
+            targets = targets.cuda(non_blocking=True)
         ground_truth_array = np.zeros(opt.n_classes_clf +1,)
         with torch.no_grad():
             inputs = Variable(inputs)
@@ -417,6 +428,7 @@ for idx, path in enumerate(test_paths[buf:]):
                 pred_start = []
 
             cum_sum = np.zeros(opt.n_classes_clf,)
+            active_index = 0
             pred_start = []
             sys.stdout.flush()
 

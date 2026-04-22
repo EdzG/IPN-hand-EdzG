@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-import pdb
+import pdb #python debugger
 
 from models import resnet, resnext, resnetl, c3d, mobilenetv2, shufflenetv2
 
@@ -9,7 +9,7 @@ def generate_model(opt):
     assert opt.model in [
         'resnet', 'resnetl', 'resnext', 'c3d', 'mobilenetv2', 'shufflenetv2'
     ]
-
+# Selects the different version of resnet
     if opt.model == 'resnet':
         assert opt.model_depth in [10, 50]
 
@@ -39,6 +39,7 @@ def generate_model(opt):
                 sample_size=opt.sample_size,
                 sample_duration=opt.sample_duration)
         elif opt.model_depth == 18:
+            #EG: Error? Should it be resnetl18? 
             model = resnetl.resnetl10(
                 num_classes=opt.n_classes,
                 shortcut_type=opt.resnet_shortcut,
@@ -80,9 +81,11 @@ def generate_model(opt):
         model = shufflenetv2.shf_v2(
             num_classes=opt.n_classes,
             sample_size=opt.sample_size,
-            width_mult=opt.width_mult)
+            width_mult=opt.width_mut)
     
     if not opt.no_cuda:
+        # DataParallel allows the model to be runned on multiple 
+        # GPUs if available. 
         model = nn.DataParallel(model, device_ids=None)
 
         if opt.pretrain_path:
@@ -93,6 +96,8 @@ def generate_model(opt):
                 if opt.sample_duration < 32 and opt.model != 'c3d':
                     model = _modify_first_conv_layer(model,3,3)
                 if opt.model in  ['mobilenetv2', 'shufflenetv2']:
+                    # del pretrain removes the last layer of the model
+                    # because the dataset might have a different num of classes
                     del pretrain['state_dict']['module.classifier.1.weight']
                     del pretrain['state_dict']['module.classifier.1.bias']
                 else:

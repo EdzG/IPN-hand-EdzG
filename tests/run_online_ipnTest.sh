@@ -1,17 +1,18 @@
 #!/bin/bash
 export CUDA_VISIBLE_DEVICES=0
+export PYTHONPATH=$PYTHONPATH:.
 
 python online_test.py \
-	--root_path /host/space0/gibran/ \
-	--video_path dataset/HandGestures/IPN_dataset \
-	--annotation_path scripts/Real-time-GesRec/annotation_ipnGesture/ipnall.json \
-	--resume_path_det scripts/Real-time-GesRec/report_ipn/ipnDetRf_sc8b64_resnetl-10.pth \
-	--resume_path_clf scripts/Real-time-GesRec/report_ipn/ipnClfRf_jes32rb32_resnext-101.pth \
-	--result_path scripts/Real-time-GesRec/results_ipn \
+	--root_path /home/edzz/repos/IPN-hand-EdzG \
+	--video_path datasets/HandGestures/IPN_dataset \
+	--annotation_path annotation_ipnGesture/ipnall.json \
+	--resume_path_det report_ipn/ipnDet_sc8b64_resnetl-10.pth \
+	--resume_path_clf report_ipn/ipnClf_jes32rb32_resnext-101.pth \
+	--result_path results_ipn \
 	--dataset ipn \
-	--store_name RGB-flo_l015Ma \
-	--modality_det RGB-flo \
-	--modality_clf RGB-flo \
+	--store_name RGB\
+	--modality_det RGB\
+	--modality_clf RGB\
 	--sample_duration_det 8 \
 	--sample_duration_clf 32 \
 	--model_det resnetl \

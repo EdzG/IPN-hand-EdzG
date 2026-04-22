@@ -23,7 +23,7 @@ def pil_loader(path, modality):
             if modality in ['RGB', 'flo']:
                 return img.convert('RGB')
             elif modality in ['Depth', 'seg']:
-                return img.convert('L') # 8-bit pixels, black and white check from https://pillow.readthedocs.io/en/3.0.x/handbook/concepts.html
+                return img.convert('L') # 8-bit pixels, black and white check from https://pillow.recadthedocs.io/en/3.0.x/handbook/concepts.html
 
 
 def accimage_loader(path, modality):
