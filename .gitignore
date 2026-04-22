@@ -1,0 +1,49 @@
+# --- Python / Environment ---
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+.env
+
+# --- PyTorch & Machine Learning ---
+# Exclude large model checkpoints and weights
+*.pth
+*.pt
+*.ckpt
+*.weights
+# Exclude logs created by training
+runs/
+lightning_logs/
+
+# --- Datasets (Specific to your project) ---
+# Assuming your data is in these subfolders
+bega/datasets/
+annotation_*/
+Subject*/
+*frames/
+*.mat
+*.csv
+# If you have a general data folder
+data/
+
+# --- Jupyter Notebooks ---
+.ipynb_checkpoints
+
+# --- Editor / OS Specific ---
+# Neovim / Vim swap files
+*.swp
+*.swo
+# Ubuntu/Linux thumbnails and trash
+.DS_Store
+.directory
+.Trash-800
+
+# --- Results & Logs ---
+# Exclude the JSON/log files your script generates
+results/
+res_*.json
+opts_det_*.json
+opts_clf_*.json
+*.log
