@@ -1,7 +1,7 @@
 import torch
 import torch.utils.data as data
 from PIL import Image
-from spatial_transforms import *
+from ..transforms.spatial_transforms import *
 import os
 import math
 import functools
@@ -11,7 +11,7 @@ from numpy.random import randint
 import numpy as np
 import random
 
-from utils import load_value_file
+from ..utils import load_value_file
 import pdb
 
 
@@ -23,7 +23,7 @@ def pil_loader(path, modality):
             if modality in ['RGB', 'flo']:
                 return img.convert('RGB')
             elif modality in ['Depth', 'seg']:
-                return img.convert('L') # 8-bit pixels, black and white check from https://pillow.recadthedocs.io/en/3.0.x/handbook/concepts.html
+                return img.convert('L') # 8-bit pixels, black and white check from https://pillow.readthedocs.io/en/3.0.x/handbook/concepts.html
 
 
 def accimage_loader(path, modality):
@@ -58,6 +58,7 @@ def video_loader(video_dir_path, frame_indices, modality, sample_duration, image
                 return video
     elif modality in ['RGB-flo', 'RGB-seg']:
         for i in frame_indices: # index 35 is used to change img to flow
+        # seg1CM42_21_R_#156_000076
             image_path = os.path.join(video_dir_path, '{:s}_{:06d}.jpg'.format(video_dir_path.split('/')[-1],i))
 
             if modality.split('-')[1] == 'flo':
@@ -97,78 +98,70 @@ def get_class_labels(data):
     return class_labels_map
 
 
-# def get_video_names_and_annotations(data, subset):
-#     video_names = []
-#     annotations = []
-
-#     for key, value in data['database'].items():
-#         this_subset = value['subset']
-#         if this_subset == subset:
-#             label = value['annotations']['label']
-#             #video_names.append('{}/{}'.format(label, key))
-#             video_names.append(key.split('^')[0])
-#             annotations.append(value['annotations'])
-
-#     return video_names, annotations
-def get_annotation(data, whole_path):
-    annotation = []
+def get_video_names_and_annotations(data, subset):
+    video_names = []
+    annotations = []
 
     for key, value in data['database'].items():
-        if key.split('^')[0] == whole_path:
-            annotation.append(value['annotations'])
+        this_subset = value['subset']
+        if this_subset == subset:
+            label = value['annotations']['label']
+            #video_names.append('{}/{}'.format(label, key))
+            video_names.append(key.split('^')[0])
+            annotations.append(value['annotations'])
 
-    return  annotation
-# def make_dataset(root_path, annotation_path, subset, n_samples_for_each_video,
-#                  sample_duration):
-def make_dataset(annotation_path, video_path, whole_path, sample_duration, 
-                n_samples_for_each_video, stride_len):
+    return video_names, annotations
 
+
+def make_dataset(root_path, annotation_path, subset, n_samples_for_each_video,
+                 sample_duration):
     data = load_annotation_data(annotation_path)
-    whole_video_path = os.path.join(video_path, whole_path)
-    annotation = get_annotation(data, whole_path)
+    video_names, annotations = get_video_names_and_annotations(data, subset)
     class_to_idx = get_class_labels(data)
     idx_to_class = {}
     for name, label in class_to_idx.items():
         idx_to_class[label] = name
 
     dataset = []
-    print("[INFO]: IPN video is loading...")
-    import glob
+    print("[INFO]: IPN Dataset - " + subset + " is loading...")
+    print("  path: " + video_names[0])
+    for i in range(len(video_names)):
+        if i % 1000 == 0:
+            print('dataset loading [{}/{}]'.format(i, len(video_names)))
 
-    if not os.path.exists(whole_video_path):
-        print(whole_video_path , " does not exist")
-    n_frames = len(glob.glob(whole_video_path + '/*.jpg'))
-    
-    label_list = []
-    for i in range(len(annotation)):
-        begin_t = int(annotation[i]['start_frame'])
-        end_t = int(annotation[i]['end_frame'])
-        for j in range(begin_t,end_t+1):
-            label_list.append(class_to_idx[annotation[i]['label']])
-
-    label_list = np.array(label_list)
-    for _ in range(1,n_frames+1 - sample_duration,stride_len):
+        video_path = os.path.join(root_path, video_names[i])
         
-        sample = {
-                'video': whole_video_path,
-                'index': _ ,
-                'video_id' : _ 
+        if not os.path.exists(video_path):
+            continue
 
-            }
-        ## Different strategies to set true label of overlaping frames
-        # counts = np.bincount(label_list[np.array(list(range(_    - int(sample_duration/4), _ )))])
-        sample['label'] = 0 #np.argmax(counts)
+        
+
+        begin_t = int(annotations[i]['start_frame'])
+        end_t = int(annotations[i]['end_frame'])
+        n_frames = end_t - begin_t + 1
+        sample = {
+            'video': video_path,
+            'segment': [begin_t, end_t],
+            'n_frames': n_frames,
+            #'video_id': video_names[i].split('/')[1]
+            'video_id': i
+        }
+        if len(annotations) != 0:
+            sample['label'] = class_to_idx[annotations[i]['label']]
+        else:
+            sample['label'] = -1
+
         if n_samples_for_each_video == 1:
-            sample['frame_indices'] = list(range(_ , _ + sample_duration))
+            sample['frame_indices'] = list(range(begin_t, end_t + 1))
             dataset.append(sample)
         else:
             if n_samples_for_each_video > 1:
                 step = max(1,
-                            math.ceil((n_frames - 1 - sample_duration) /
-                                    (n_samples_for_each_video - 1)))
+                           math.ceil((n_frames - 1 - sample_duration) /
+                                     (n_samples_for_each_video - 1)))
             else:
                 step = sample_duration
-            for j in range(sample_duration, n_frames, step):
+            for j in range(1, n_frames, step):
                 sample_j = copy.deepcopy(sample)
                 sample_j['frame_indices'] = list(
                     range(j, min(n_frames + 1, j + sample_duration)))
@@ -177,7 +170,7 @@ def make_dataset(annotation_path, video_path, whole_path, sample_duration,
     return dataset, idx_to_class
 
 
-class IPNOnline(data.Dataset):
+class IPN(data.Dataset):
     """
     Args:
         root (string): Root directory path.
@@ -195,20 +188,19 @@ class IPNOnline(data.Dataset):
     """
 
     def __init__(self,
+                 root_path,
                  annotation_path,
-                 video_path,
-                 whole_path,
+                 subset,
                  n_samples_for_each_video=1,
                  spatial_transform=None,
                  temporal_transform=None,
                  target_transform=None,
                  sample_duration=16,
                  modality='RGB',
-                 stride_len = None,
                  get_loader=get_default_video_loader):
         self.data, self.class_names = make_dataset(
-            annotation_path, video_path, whole_path, sample_duration,
-            n_samples_for_each_video, stride_len)
+            root_path, annotation_path, subset, n_samples_for_each_video,
+            sample_duration)
 
         self.spatial_transform = spatial_transform
         self.temporal_transform = temporal_transform
@@ -229,9 +221,9 @@ class IPNOnline(data.Dataset):
 
         frame_indices = self.data[index]['frame_indices']
 
+
         if self.temporal_transform is not None:
             frame_indices = self.temporal_transform(frame_indices)
-
         clip = self.loader(path, frame_indices, self.modality, self.sample_duration)
         oversample_clip =[]
         if self.spatial_transform is not None:
@@ -241,6 +233,7 @@ class IPNOnline(data.Dataset):
         im_dim = clip[0].size()[-2:]
         clip = torch.cat(clip, 0).view((self.sample_duration, -1) + im_dim).permute(1, 0, 2, 3)
         
+     
         target = self.data[index]
         if self.target_transform is not None:
             target = self.target_transform(target)

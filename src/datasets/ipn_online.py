@@ -1,7 +1,7 @@
 import torch
 import torch.utils.data as data
 from PIL import Image
-from spatial_transforms import *
+from ..transforms.spatial_transforms import *
 import os
 import math
 import functools
@@ -10,10 +10,9 @@ import copy
 from numpy.random import randint
 import numpy as np
 import random
-import sys
-import glob
 
-from utils import load_value_file
+from ..utils import load_value_file
+import pdb
 
 
 def pil_loader(path, modality):
@@ -21,10 +20,10 @@ def pil_loader(path, modality):
     with open(path, 'rb') as f:
         #print(path)
         with Image.open(f) as img:
-            if modality == 'RGB':
+            if modality in ['RGB', 'flo']:
                 return img.convert('RGB')
-            elif modality == 'Flow':
-                return img.convert('L')
+            elif modality in ['Depth', 'seg']:
+                return img.convert('L') # 8-bit pixels, black and white check from https://pillow.recadthedocs.io/en/3.0.x/handbook/concepts.html
 
 
 def accimage_loader(path, modality):
@@ -37,27 +36,47 @@ def accimage_loader(path, modality):
 
 
 def get_default_image_loader():
-    from torchvision import get_image_backend
-    if get_image_backend() == 'accimage':
-        return accimage_loader
-    else:
-        return pil_loader
+    return pil_loader
+    # from torchvision import get_image_backend
+    # if get_image_backend() == 'accimage':
+    #     return accimage_loader
+    # else:
+    #     return pil_loader
 
 
 def video_loader(video_dir_path, frame_indices, modality, sample_duration, image_loader):
     
     video = []
-
-    if modality == 'RGB':
+    if modality in ['RGB', 'flo', 'seg']:
         for i in frame_indices:
-            image_path = os.path.join(video_dir_path, '{:05d}.jpg'.format(i))
+            image_path = os.path.join(video_dir_path, '{:s}_{:06d}.jpg'.format(video_dir_path.split('/')[-1],i))
             if os.path.exists(image_path):
+                
                 video.append(image_loader(image_path, modality))
             else:
                 print(image_path, "------- Does not exist")
                 return video
-    return video
+    elif modality in ['RGB-flo', 'RGB-seg']:
+        for i in frame_indices: # index 35 is used to change img to flow
+            image_path = os.path.join(video_dir_path, '{:s}_{:06d}.jpg'.format(video_dir_path.split('/')[-1],i))
 
+            if modality.split('-')[1] == 'flo':
+                sensor = 'flow'
+            elif modality.split('-')[1] == 'seg':
+                sensor = 'segment'
+            image_path_depth = os.path.join(video_dir_path.replace('frames',sensor), '{:s}_{:06d}.jpg'.format(video_dir_path.split('/')[-1],i))
+            
+            image = image_loader(image_path, 'RGB')
+            image_depth = image_loader(image_path_depth, 'Depth')
+
+            if os.path.exists(image_path):
+                video.append(image)
+                video.append(image_depth)
+            else:
+                print(image_path, "------- Does not exist")
+                return video
+    
+    return video
 
 def get_default_video_loader():
     image_loader = get_default_image_loader()
@@ -78,75 +97,78 @@ def get_class_labels(data):
     return class_labels_map
 
 
-def get_video_names_and_annotations(data, subset):
-    video_names = []
-    annotations = []
+# def get_video_names_and_annotations(data, subset):
+#     video_names = []
+#     annotations = []
+
+#     for key, value in data['database'].items():
+#         this_subset = value['subset']
+#         if this_subset == subset:
+#             label = value['annotations']['label']
+#             #video_names.append('{}/{}'.format(label, key))
+#             video_names.append(key.split('^')[0])
+#             annotations.append(value['annotations'])
+
+#     return video_names, annotations
+def get_annotation(data, whole_path):
+    annotation = []
 
     for key, value in data['database'].items():
-        this_subset = value['subset']
-        if this_subset == subset:
-            label = value['annotations']['label']
-            #video_names.append('{}/{}'.format(label, key))
-            video_names.append(key)
-            annotations.append(value['annotations'])
+        if key.split('^')[0] == whole_path:
+            annotation.append(value['annotations'])
 
-    return video_names, annotations
+    return  annotation
+# def make_dataset(root_path, annotation_path, subset, n_samples_for_each_video,
+#                  sample_duration):
+def make_dataset(annotation_path, video_path, whole_path, sample_duration, 
+                n_samples_for_each_video, stride_len):
 
-
-def make_dataset(root_path, annotation_path, subset, n_samples_for_each_video,
-                 sample_duration):
     data = load_annotation_data(annotation_path)
-    video_names, annotations = get_video_names_and_annotations(data, subset)
+    whole_video_path = os.path.join(video_path, whole_path)
+    annotation = get_annotation(data, whole_path)
     class_to_idx = get_class_labels(data)
     idx_to_class = {}
     for name, label in class_to_idx.items():
         idx_to_class[label] = name
 
     dataset = []
-    print("[INFO]: Jester Dataset - " + subset + " is loading...")
-    for i in range(len(video_names)):
-        if i % 1000 == 0:
-            print('dataset loading [{}/{}]'.format(i, len(video_names)))
-            sys.stdout.flush()
+    print("[INFO]: IPN video is loading...")
+    import glob
 
-        video_path = os.path.join(root_path, video_names[i])
+    if not os.path.exists(whole_video_path):
+        print(whole_video_path , " does not exist")
+    n_frames = len(glob.glob(whole_video_path + '/*.jpg'))
+    
+    label_list = []
+    for i in range(len(annotation)):
+        begin_t = int(annotation[i]['start_frame'])
+        end_t = int(annotation[i]['end_frame'])
+        for j in range(begin_t,end_t+1):
+            label_list.append(class_to_idx[annotation[i]['label']])
+
+    label_list = np.array(label_list)
+    for _ in range(1,n_frames+1 - sample_duration,stride_len):
         
-        if not os.path.exists(video_path):
-            continue
-
-        # n_frames_file_path = os.path.join(video_path, 'n_frames') # reads number of farames under each video path
-        # n_frames = int(load_value_file(n_frames_file_path)) 
-        # n_frames = len(glob.glob(os.path.join(video_path, '*.jpg'))) # in case there is no n_frames file uncomment this line
-        n_frames = annotations[i]['end_frame']
-
-        if n_frames <= 0:
-            continue
-
-        begin_t = 1
-        end_t = n_frames
         sample = {
-            'video': video_path,
-            'segment': [begin_t, end_t],
-            'n_frames': n_frames,
-            #'video_id': video_names[i].split('/')[1]
-            'video_id': video_names[i]
-        }
-        if len(annotations) != 0:
-            sample['label'] = class_to_idx[annotations[i]['label']]
-        else:
-            sample['label'] = -1
+                'video': whole_video_path,
+                'index': _ ,
+                'video_id' : _ 
 
+            }
+        ## Different strategies to set true label of overlaping frames
+        # counts = np.bincount(label_list[np.array(list(range(_    - int(sample_duration/4), _ )))])
+        sample['label'] = 0 #np.argmax(counts)
         if n_samples_for_each_video == 1:
-            sample['frame_indices'] = list(range(1, n_frames + 1))
+            sample['frame_indices'] = list(range(_ , _ + sample_duration))
             dataset.append(sample)
         else:
             if n_samples_for_each_video > 1:
                 step = max(1,
-                           math.ceil((n_frames - 1 - sample_duration) /
-                                     (n_samples_for_each_video - 1)))
+                            math.ceil((n_frames - 1 - sample_duration) /
+                                    (n_samples_for_each_video - 1)))
             else:
                 step = sample_duration
-            for j in range(1, n_frames, step):
+            for j in range(sample_duration, n_frames, step):
                 sample_j = copy.deepcopy(sample)
                 sample_j['frame_indices'] = list(
                     range(j, min(n_frames + 1, j + sample_duration)))
@@ -155,9 +177,7 @@ def make_dataset(root_path, annotation_path, subset, n_samples_for_each_video,
     return dataset, idx_to_class
 
 
-
-
-class Jester(data.Dataset):
+class IPNOnline(data.Dataset):
     """
     Args:
         root (string): Root directory path.
@@ -175,19 +195,20 @@ class Jester(data.Dataset):
     """
 
     def __init__(self,
-                 root_path,
                  annotation_path,
-                 subset,
+                 video_path,
+                 whole_path,
                  n_samples_for_each_video=1,
                  spatial_transform=None,
                  temporal_transform=None,
                  target_transform=None,
                  sample_duration=16,
                  modality='RGB',
+                 stride_len = None,
                  get_loader=get_default_video_loader):
         self.data, self.class_names = make_dataset(
-            root_path, annotation_path, subset, n_samples_for_each_video,
-            sample_duration)
+            annotation_path, video_path, whole_path, sample_duration,
+            n_samples_for_each_video, stride_len)
 
         self.spatial_transform = spatial_transform
         self.temporal_transform = temporal_transform
@@ -203,27 +224,27 @@ class Jester(data.Dataset):
         Returns:
             tuple: (image, target) where target is class_index of the target class.
         """
+
         path = self.data[index]['video']
 
         frame_indices = self.data[index]['frame_indices']
+
         if self.temporal_transform is not None:
             frame_indices = self.temporal_transform(frame_indices)
-        clip = self.loader(path, frame_indices, self.modality, self.sample_duration)
 
+        clip = self.loader(path, frame_indices, self.modality, self.sample_duration)
         oversample_clip =[]
         if self.spatial_transform is not None:
             self.spatial_transform.randomize_parameters()
             clip = [self.spatial_transform(img) for img in clip]
-        
+    
         im_dim = clip[0].size()[-2:]
         clip = torch.cat(clip, 0).view((self.sample_duration, -1) + im_dim).permute(1, 0, 2, 3)
         
-
         target = self.data[index]
         if self.target_transform is not None:
             target = self.target_transform(target)
 
-        
         return clip, target
 
     def __len__(self):

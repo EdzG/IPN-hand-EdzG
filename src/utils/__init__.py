@@ -74,14 +74,14 @@ class Queue:
     def printQueue(self):
         return self.queue
 
-    #Average   
+    #Average
     def _ma(self):
         return np.array(self.queue[:self.max_size]).mean(axis = 0)
 
     #Median
     def _median(self):
         return np.median(np.array(self.queue[:self.max_size]), axis = 0)
-    
+
     #Exponential average
     def _ewma(self):
         weights = np.exp(np.linspace(-1., 0., self.max_size))
@@ -103,7 +103,7 @@ def LevenshteinDistance(a,b):
         # Make sure n <= m, to use O(min(n,m)) space
         a,b = b,a
         n,m = m,n
-        
+
     current = range(n+1)
     for i in range(1,m+1):
         previous, current = current, [i]+[0]*n
@@ -113,7 +113,7 @@ def LevenshteinDistance(a,b):
             if a[j-1] != b[i-1]:
                 change = change + 1
             current[j] = min(add, delete, change)
-            
+
     return current[n]
 
 

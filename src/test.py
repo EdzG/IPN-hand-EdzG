@@ -7,7 +7,7 @@ import sys
 import json
 import pdb
 
-from utils import AverageMeter
+from .utils import AverageMeter
 
 
 def calculate_video_results(output_buffer, video_id, test_results, class_names):

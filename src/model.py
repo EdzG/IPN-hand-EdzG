@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-from models import resnet, resnext, resnetl, c3d, mobilenetv2, shufflenetv2
+from .models import resnet, resnext, resnetl, c3d, mobilenetv2, shufflenetv2
 
 
 def generate_model(opt):
@@ -11,7 +11,7 @@ def generate_model(opt):
 
     if opt.model == 'resnet':
         assert opt.model_depth in [10, 50]
-        from models.resnet import get_fine_tuning_parameters
+        from .models.resnet import get_fine_tuning_parameters
         if opt.model_depth == 10:
             model = resnet.resnet10(
                 num_classes=opt.n_classes,
@@ -27,7 +27,7 @@ def generate_model(opt):
 
     elif opt.model == 'resnetl':
         assert opt.model_depth in [10]
-        from models.resnetl import get_fine_tuning_parameters
+        from .models.resnetl import get_fine_tuning_parameters
         model = resnetl.resnetl10(
             num_classes=opt.n_classes,
             shortcut_type=opt.resnet_shortcut,
@@ -36,7 +36,7 @@ def generate_model(opt):
 
     elif opt.model == 'resnext':
         assert opt.model_depth in [101]
-        from models.resnext import get_fine_tuning_parameters
+        from .models.resnext import get_fine_tuning_parameters
         model = resnext.resnet101(
             num_classes=opt.n_classes,
             shortcut_type=opt.resnet_shortcut,
@@ -46,21 +46,21 @@ def generate_model(opt):
 
     elif opt.model == 'c3d':
         assert opt.model_depth in [10]
-        from models.c3d import get_fine_tuning_parameters
+        from .models.c3d import get_fine_tuning_parameters
         model = c3d.c3d_v1(
             sample_size=opt.sample_size,
             sample_duration=opt.sample_duration,
             num_classes=opt.n_classes)
 
     elif opt.model == 'mobilenetv2':
-        from models.mobilenetv2 import get_fine_tuning_parameters
+        from .models.mobilenetv2 import get_fine_tuning_parameters
         model = mobilenetv2.mob_v2(
             num_classes=opt.n_classes,
             sample_size=opt.sample_size,
             width_mult=opt.width_mult)
 
     elif opt.model == 'shufflenetv2':
-        from models.shufflenetv2 import get_fine_tuning_parameters
+        from .models.shufflenetv2 import get_fine_tuning_parameters
         model = shufflenetv2.shf_v2(
             num_classes=opt.n_classes,
             sample_size=opt.sample_size,

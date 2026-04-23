@@ -4,11 +4,11 @@ import numpy as np
 from PIL import Image
 from torch.nn import functional as F
 
-from opts import parse_opts_online
-from model import generate_model, _modify_first_conv_layer
-from mean import get_mean, get_std
-from spatial_transforms import Compose, Scale, CenterCrop, ToTensor, Normalize
-from utils import Queue
+from src.opts import parse_opts_online
+from src.model import generate_model, _modify_first_conv_layer
+from src.mean import get_mean, get_std
+from src.transforms.spatial_transforms import Compose, Scale, CenterCrop, ToTensor, Normalize
+from src.utils import Queue
 
 CLASS_LABELS = ["None", "GESTURE ACTIVE!"]
 
@@ -69,7 +69,7 @@ def run_camera():
     ])
 
     if opt.det_backend == 'mediapipe':
-        from mediapipe_detector import MediaPipeDetector
+        from src.mediapipe_detector import MediaPipeDetector
         mp_det = MediaPipeDetector(min_detection_confidence=opt.mediapipe_confidence)
         cnn_det = None
         backend_label = f'MediaPipe (conf≥{opt.mediapipe_confidence})'

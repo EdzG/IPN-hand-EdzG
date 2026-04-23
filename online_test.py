@@ -11,14 +11,13 @@ from sklearn.metrics import confusion_matrix
 from torch.nn import functional as F
 from pathlib import Path
 
-from opts import parse_opts_online
-from model import generate_model, _modify_first_conv_layer
-from mean import get_mean, get_std
-from spatial_transforms import *
-from temporal_transforms import *
-from target_transforms import ClassLabel
-from dataset import get_online_data
-from utils import Logger, AverageMeter, LevenshteinDistance, Queue
+from src.opts import parse_opts_online
+from src.model import generate_model, _modify_first_conv_layer
+from src.mean import get_mean, get_std
+from src.transforms import *
+from src.transforms.target_transforms import ClassLabel
+from src.dataset import get_online_data
+from src.utils import Logger, AverageMeter, LevenshteinDistance, Queue
 
 
 def weighting_func(x):
@@ -116,7 +115,7 @@ def main():
     # MediaPipe detector (when selected)
     mp_det = None
     if opt.det_backend == 'mediapipe':
-        from mediapipe_detector import MediaPipeDetector
+        from src.mediapipe_detector import MediaPipeDetector
         mp_det = MediaPipeDetector(min_detection_confidence=opt.mediapipe_confidence)
         print(f'[INFO] Using MediaPipe detector (conf≥{opt.mediapipe_confidence})')
 

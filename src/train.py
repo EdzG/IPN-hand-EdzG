@@ -5,7 +5,7 @@ import os
 import sys
 import pdb
 
-from utils import AverageMeter, calculate_accuracy, calculate_precision, calculate_recall
+from .utils import AverageMeter, calculate_accuracy, calculate_precision, calculate_recall
 
 
 def train_epoch(epoch, data_loader, model, criterion, optimizer, opt,

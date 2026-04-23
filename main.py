@@ -9,19 +9,18 @@ from torch import nn
 from torch import optim
 from torch.optim import lr_scheduler
 
-from opts import parse_opts_offline
-from model import generate_model
-from mean import get_mean, get_std
-from spatial_transforms import *
-from temporal_transforms import *
-# from temporal_transforms_adap import *
-from target_transforms import ClassLabel, VideoID
-from target_transforms import Compose as TargetCompose
-from dataset import get_training_set, get_validation_set, get_test_set
-from utils import Logger
-from train import train_epoch
-from validation import val_epoch, val_epoch_true
-import test
+from src.opts import parse_opts_offline
+from src.model import generate_model
+from src.mean import get_mean, get_std
+from src.transforms import *
+# from src.transforms.temporal_transforms_adap import *
+from src.transforms.target_transforms import ClassLabel, VideoID
+from src.transforms.target_transforms import Compose as TargetCompose
+from src.dataset import get_training_set, get_validation_set, get_test_set
+from src.utils import Logger
+from src.train import train_epoch
+from src.validation import val_epoch, val_epoch_true
+import src.test as test
 import pdb
 
 

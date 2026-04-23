@@ -6,7 +6,7 @@ import sys
 import pdb
 import numpy as np
 
-from utils import AverageMeter, calculate_accuracy, calculate_precision, calculate_recall, Queue
+from .utils import AverageMeter, calculate_accuracy, calculate_precision, calculate_recall, Queue
 
 
 def val_epoch(epoch, data_loader, model, criterion, opt, logger):

@@ -9,19 +9,18 @@ from sklearn.metrics import confusion_matrix
 from torch.nn import functional as F
 from pathlib import Path
 
-from opts import parse_opts_offline
-from model import generate_model
-from mean import get_mean, get_std
-from spatial_transforms import *
-from temporal_transforms import *
-from target_transforms import ClassLabel, VideoID
-from target_transforms import Compose as TargetCompose
-from dataset import get_training_set, get_validation_set, get_test_set, get_online_data
-from utils import Logger
-from train import train_epoch
-from validation import val_epoch
-import test
-from utils import AverageMeter, calculate_precision, calculate_recall
+from src.opts import parse_opts_offline
+from src.model import generate_model
+from src.mean import get_mean, get_std
+from src.transforms import *
+from src.transforms.target_transforms import ClassLabel, VideoID
+from src.transforms.target_transforms import Compose as TargetCompose
+from src.dataset import get_training_set, get_validation_set, get_test_set, get_online_data
+from src.utils import Logger
+from src.train import train_epoch
+from src.validation import val_epoch
+import src.test as test
+from src.utils import AverageMeter, calculate_precision, calculate_recall
 
 
 # ---------------------------------------------------------------------------

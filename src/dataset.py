@@ -1,6 +1,6 @@
-from datasets.jester import Jester
-from datasets.ipn import IPN
-from datasets.ipn_online import IPNOnline
+from .datasets.jester import Jester
+from .datasets.ipn import IPN
+from .datasets.ipn_online import IPNOnline
 
 
 def get_training_set(opt, spatial_transform, temporal_transform, target_transform):
