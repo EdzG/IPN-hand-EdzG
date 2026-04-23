@@ -8,42 +8,44 @@ venv/
 .env
 
 # --- PyTorch & Machine Learning ---
-# Exclude large model checkpoints and weights
 *.pth
 *.pt
 *.ckpt
 *.weights
-# Exclude logs created by training
 runs/
 lightning_logs/
 
-# --- Datasets (Specific to your project) ---
-# Assuming your data is in these subfolders
-bega/datasets/
-annotation_*/
-Subject*/
+# --- Datasets (Core Pattern Matching) ---
+# Ignore the specific large dataset folders
+IPN_dataset/
+Jester_dataset/
+HandGestures/IPN_dataset/
+
+# General patterns for frames and archives
 *frames/
+*.tgz
+*.zip
+*.tar
+*.gz
+
+# Specific metadata/data types
+Subject*/
+annotation_*/
 *.mat
 *.csv
-# If you have a general data folder
-data/
-
-# --- Jupyter Notebooks ---
-.ipynb_checkpoints
-
-# --- Editor / OS Specific ---
-# Neovim / Vim swap files
-*.swp
-*.swo
-# Ubuntu/Linux thumbnails and trash
-.DS_Store
-.directory
-.Trash-800
-
-# --- Results & Logs ---
-# Exclude the JSON/log files your script generates
-results/
+*.json
+# Keep your scripts, but ignore result JSONs
 res_*.json
 opts_det_*.json
 opts_clf_*.json
+
+# --- Editor / OS Specific ---
+*.swp
+*.swo
+.DS_Store
+.directory
+.Trash-*
+
+# --- Results & Logs ---
+results/
 *.log
