@@ -1,121 +1,163 @@
-# IPN Hand: A Video Dataset and Benchmark for Real-Time Continuous Hand Gesture Recognition
-## [Project page and download link of the dataset](https://gibranbenitez.github.io/IPN_Hand/)
+# Touchless Presentation Control via Hand Gesture Recognition
 
-PyTorch implementation, codes and pretrained models of the paper: 
+This repository implements a real-time continuous hand gesture recognition system designed for touchless interaction, specifically optimized for controlling presentations (PowerPoint, PDF readers, etc.). It leverages state-of-the-art 3D Convolutional Neural Networks (3D-CNNs) and MediaPipe to provide a robust, low-latency interface.
 
-[__IPN Hand: A Video Dataset and Benchmark for Real-Time Continuous Hand Gesture Recognition__](https://arxiv.org/abs/2005.02134)
-<br>
-[Gibran Benitez-Garcia](https://gibranbenitez.github.io), Jesus Olivares-Mercado, Gabriel Sanchez-Perez, and Keiji Yanai
-<br>
-___Accepted at [ICPR 2020](https://www.icpr2020.it/)___
+---
 
-This paper proposes the [__IPN Hand dataset__](https://gibranbenitez.github.io/IPN_Hand/), a new benchmark video dataset with sufficient size, variation, and real-world elements able to train and evaluate deep neural networks for continuous Hand Gesture Recognition (HGR).
-With our dataset, the performance of three 3D-CNN models is evaluated on the tasks of isolated and continuous real-time HGR.
-Since IPN hand contains RGB videos only, we analyze the possibility of increasing the recognition accuracy by adding multiple modalities derived from RGB frames, i.e., optical flow and semantic segmentation, while keeping the real-time performance. 
+## 📖 Table of Contents
+1. [Project Overview](#project-overview)
+2. [System Architecture](#system-architecture)
+3. [Supported Gestures](#supported-gestures)
+4. [Installation & Setup](#installation--setup)
+5. [Training Workflows](#training-workflows)
+6. [Real-Time Inference & Control](#real-time-inference--control)
+7. [Codebase Walkthrough](#codebase-walkthrough)
+8. [Acknowledgements](#acknowledgements)
 
-### Introduction video (supplementary material):
+---
 
-<div align="center" style="width:image width px;">
-  <a href="https://youtu.be/OH3n5rf2wV8" ><img src="https://img.youtube.com/vi/OH3n5rf2wV8/maxresdefault.jpg"  width="640"></a>
-</div>
+## 🌟 Project Overview
+The goal of this project is to enable seamless, touchless navigation of digital content. By recognizing complex dynamic gestures in real-time RGB video streams, the system can trigger keyboard events (e.g., Next Slide, Previous Slide, Zoom) without the need for physical controllers.
 
-### Dataset details
+**Key Features:**
+- **Real-Time Detection:** A two-stage pipeline that first detects hand presence and then classifies the specific gesture.
+- **Hybrid Backends:** Supports both 3D-CNN and MediaPipe-based detection for different hardware constraints.
+- **Continuous Recognition:** Handles long, unsegmented video streams with temporal smoothing to prevent "flickering" predictions.
 
-The subjects from the dataset were asked to record gestures using their own PC keeping the defined resolution and frame rate. 
-Thus, __only RGB videos__ were captured, and the distance between the camera and each subject varies.
-All videos were recorded in the resolution of __640x480 at 30 fps__. 
+---
 
-Each subject continuously performed __21 gestures__ with three random breaks in a single video.
-We defined [__13 gestures__](https://gibranbenitez.github.io/IPN_Hand/Classes) to control the pointer and actions focused on the interaction with touchless screens.
+## 🏗 System Architecture
 
-Description and statics of each gesture are shown in the next table. 
-Duration is measured in the number of frames (30 frames = 1 s).
+The project employs a dual-model architecture to achieve high accuracy without sacrificing real-time performance.
 
-id |	Label |  Gesture	| Instances	| Mean duration (std)
--- | -------- | -------- | ---------- | -------------------
-_1_ | _D0X_ | _Non-gesture_ | _1431_ |	_147 (133)_
-2	| B0A | Pointing with one finger	| 1010	| 219 (67)
-3  | B0B |	Pointing with two fingers	| 1007	| 224 (69)
-4	| G01 | Click with one finger	| 200	| 56 (29)
-5	| G02 | Click with two fingers | 200	| 60 (43)
-6	| G03 | Throw up	| 200	| 62 (25)
-7	| G04 | Throw down	| 201	| 65 (28)
-8	| G05 | Throw left	| 200	| 66 (27)
-9	| G06 | Throw right	| 200	| 64 (28)
-10	| G07 | Open twice	| 200	| 76 (31)
-11	| G08 | Double click with one finger	| 200	| 68 (28)
-12	| G09 | Double click with two fingers	| 200	| 70 (30)
-13	| G10 | Zoom in	| 200	| 65 (29)
-14	| G11 | Zoom out	| 200	| 64 (28)
-| |  | _All non-gestures:_	| _1431_	| _147 (133)_
-| |   | _All gestures:_	| _4218_	| _140 (94)_
-|  | |  ___Total:___	| ___5649___	| ___142 (105)___
+### 1. Lightweight Hybrid Pipeline (CNN + CNN)
+Designed for low-latency execution on commodity hardware.
+- **Detector:** A lightweight **ResNetL-10** (8-frame clip) for fast binary classification (Gesture vs. Non-Gesture).
+- **Classifier:** Optimized architectures like **ResNet-18, MobileNetV2, or ShuffleNetV2** (32-frame clip) to balance accuracy with real-time CPU/GPU constraints.
 
-#### [_Video examples of all classes (.GIF) here_](https://gibranbenitez.github.io/IPN_Hand/Classes)
+### 2. MediaPipe Integration (Landmarks + CNN)
+The most efficient path for standard laptops/PCs.
+- **Detector:** Uses **MediaPipe Hands** for per-frame hand presence detection (minimal CPU overhead).
+- **Classifier:** A lightweight CNN classifier is triggered only when a hand is detected, significantly reducing "Midas-Touch" errors (unintentional inputs).
 
-### Baseline results
+---
 
-[___Baseline results___](https://gibranbenitez.github.io/IPN_Hand/Results) for isolated and continuous hand gesture recognition of the IPN Hand dataset can be found [__here__](https://gibranbenitez.github.io/IPN_Hand/Results).
+## 🖐 Supported Gestures
+The system is trained on the **IPN-Hand** dataset, which includes 13 interactive gesture classes and 1 background (non-gesture) class:
 
-## Requirements
-Please install the following requirements.
+| ID | Gesture | Presentation Action (Typical) |
+|---|---|---|
+| **D0X** | No Gesture | Idle / Standby |
+| **B0A** | Pointing (1 finger) | Mouse Pointer / Laser |
+| **B0B** | Pointing (2 fingers) | Secondary Pointer |
+| **G01** | Click (1 finger) | Select / Open |
+| **G02** | Click (2 fingers) | Right Click / Menu |
+| **G03** | Throw Up | Start Presentation / Fullscreen |
+| **G04** | Throw Down | Exit Presentation |
+| **G05** | Throw Left | **Next Slide** (Page Down) |
+| **G06** | Throw Right | **Previous Slide** (Page Up) |
+| **G07** | Open Twice | Toggle Overview |
+| **G08** | Double Click (1 finger) | Execute / Open |
+| **G09** | Double Click (2 fingers) | Context Menu |
+| **G10** | Zoom In | **Zoom In** |
+| **G11** | Zoom Out | **Zoom Out** |
 
-- Python 3.5+
-- PyTorch 1.0+
-- TorchVision
-- Pillow
-- OpenCV
+---
 
-### Pretrained models
-* [ResNeXt-101 models](https://drive.google.com/open?id=156fE3mO3YdFPY4pfreWYQn5sxQdu7Bmt) 
-* [ResNet-50 models](https://drive.google.com/open?id=1X9uom_f0euHmhAgO8XNJUqUGH98saB7Z) 
-* HarDNet model (soon)
-* [Optical Flow model](https://github.com/sniklaus/pytorch-spynet) 
+## 🚀 Installation & Setup
 
+### Prerequisites
+- Python 3.7+
+- PyTorch 1.5+ (with CUDA support recommended)
+- OpenCV, Pillow, MediaPipe, Scikit-learn
 
-## Usage
+### Setup
+1. **Clone the Repository:**
+   ```bash
+   git clone https://github.com/your-repo/IPN-hand-EdzG.git
+   cd IPN-hand-EdzG
+   ```
 
-### Preparation
-* Download the dataset from [here](https://gibranbenitez.github.io/IPN_Hand/)
-* Clone this repository
-```console
-$ git clone https://github.com/GibranBenitez/IPN-hand
-```
-* Store all pretrained models in `./report_ipn/`
+2. **Install Dependencies:**
+   ```bash
+   pip install torch torchvision opencv-python mediapipe scikit-learn pillow
+   ```
 
-### Isolated testing
-* Change the path of the dataset from `./tests/run_offline_ipn_Clf.sh` and run
+3. **Prepare Datasets:**
+   - Download the **IPN-Hand** dataset and place it in `src/datasets/HandGestures/IPN_dataset`.
+   - Use the scripts in `src/utils/data_prep/` to generate required `.json` annotations.
+
+4. **Download Checkpoints:**
+   Place pre-trained `.pth` models in the `report_ipn/` directory.
+
+---
+
+## ⚡ Training Workflows
+
+### 1. Training from Scratch (IPN-Hand)
+To train the classifier on the IPN-Hand dataset without pre-training:
 ```bash
-$ bash run_offline_ipn_Clf.sh
+python main.py --mode scratch --dataset ipn --model resnext --model_depth 101 --batch_size 32
 ```
-### Continuous testing
-* Change the path of the dataset from `./tests/run_online_ipnTest.sh` and run
+
+### 2. Pre-training (Jester) & Fine-tuning (IPN)
+Recommended for maximum accuracy.
+1. **Pre-train on Jester:**
+   ```bash
+   python main.py --mode pretrain --dataset jester --model resnext --model_depth 101
+   ```
+2. **Fine-tune on IPN-Hand:**
+   ```bash
+   python main.py --mode finetune --dataset ipn --pretrain_path report_ipn/jester_checkpoint.pth --ft_begin_index 4
+   ```
+
+---
+
+## 🎮 Real-Time Inference & Control
+
+### Live Webcam Test (Detector Only)
+Verify your camera and detection backend:
 ```bash
-$ bash run_online_ipnTest.sh
+# Using CNN Detector
+python camera_test.py --det_backend cnn
+
+# Using MediaPipe Detector
+python camera_test.py --det_backend mediapipe
 ```
 
-## Citation
-If you find useful the IPN Hand dataset for your research, please cite the paper:
-
-```bibtex
-@inproceedings{bega2020IPNhand,
-  title={IPN Hand: A Video Dataset and Benchmark for Real-Time Continuous Hand Gesture Recognition},
-  author={Benitez-Garcia, Gibran and Olivares-Mercado, Jesus and Sanchez-Perez, Gabriel and Yanai, Keiji},
-  booktitle={25th International Conference on Pattern Recognition, {ICPR 2020}, Milan, Italy, Jan 10--15, 2021},
-  pages={1--8},
-  year={2021},
-  organization={IEEE},
-}
+### Continuous Gesture Recognition (Full Pipeline)
+Run the full online evaluation on test video sequences:
+```bash
+bash tests/run_online_ipnTest.sh
 ```
 
-## License
-The benchmark code shared in this repository is licensed under the MIT license. However, the data and annotations of the IPN Hand dataset are licensed under a [Creative Commons Attribution 4.0 License](https://creativecommons.org/licenses/by/4.0/legalcode).
+### Presentation Control Integration
+The `online_test.py` script outputs predictions in real-time. To map these to presentation actions, you can extend the prediction loop with `pyautogui`:
+```python
+# Example mapping (indices correspond to the gesture ID order)
+if best1 == 5:   # G05 (Throw Left)
+    pyautogui.press('pagedown')
+elif best1 == 6: # G06 (Throw Right)
+    pyautogui.press('pageup')
+elif best1 == 10: # G10 (Zoom In)
+    pyautogui.hotkey('ctrl', '+')
+```
 
+---
 
-## Acknowledgement
-This project is inspired by many previous works, including:
-* [Real-time hand gesture detection and classification using convolutional neural networks](https://arxiv.org/abs/1901.10323), Kopuklu et al, _FG 2019_ [[code](https://github.com/ahmetgunduz/Real-time-GesRec)]
-* [Can Spatiotemporal 3D CNNs Retrace the History of 2D CNNs and ImageNet?](http://openaccess.thecvf.com/content_cvpr_2018/html/Hara_Can_Spatiotemporal_3D_CVPR_2018_paper.html), Hara et al, _CVPR 2018_ [[code](https://github.com/kenshohara/3D-ResNets-PyTorch)]
-* [Optical Flow Estimation Using A Spatial Pyramid Network](https://arxiv.org/abs/1611.00850), Ranjan and Black, _CVPR 2017_ [[code](https://github.com/sniklaus/pytorch-spynet) by Niklaus]
-* [HarDNet: A Low Memory Traffic Network](https://arxiv.org/abs/1909.00948), Chao et al, _ICCV 2019_ [[code](https://github.com/PingoLH/FCHarDNet)]
-* [Learning to estimate 3d hand pose from single rgb images](http://openaccess.thecvf.com/content_iccv_2017/html/Zimmermann_Learning_to_Estimate_ICCV_2017_paper.html), Zimmermann and Brox, _ICCV 2017_ [[dataset](https://lmb.informatik.uni-freiburg.de/resources/datasets/RenderedHandposeDataset.en.html)]
+## 📂 Codebase Walkthrough
+
+- **`main.py`**: Entry point for all training and offline evaluation.
+- **`online_test.py`**: The core real-time engine handling model synchronization and smoothing.
+- **`src/models/`**: Implementation of 3D-CNN backbones (ResNet, ResNeXt, ShuffleNet, etc.).
+- **`src/transforms/`**: Complex spatiotemporal augmentations (Multi-scale cropping, temporal padding).
+- **`src/mediapipe_detector.py`**: Wrapper for MediaPipe's hand tracking API.
+- **`src/opts.py`**: Centralized configuration and CLI argument parsing.
+
+---
+
+## 🤝 Acknowledgements
+This project is based on the research from:
+- **IPN Hand Dataset:** Gibran Benitez-Garcia et al. (ICPR 2020).
+- **MediaPipe:** Google Open Source.
+- **PyTorch 3D-CNN:** Adapted from various spatiotemporal recognition benchmarks.
