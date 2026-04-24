@@ -56,12 +56,6 @@ def main() -> None:
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f'Trainable parameters: {trainable_params:,}', flush=True)
 
-    if hasattr(torch, 'compile'):
-        try:
-            model = torch.compile(model)
-        except Exception:
-            pass
-
     if opt.weighted:
         print('Weighted loss enabled', flush=True)
         weight = (
