@@ -11,7 +11,7 @@ from pathlib import Path
 
 from src.opts import parse_opts_offline
 from src.model import generate_model
-from src.mean import get_mean, get_std
+from src.setup import resolve_dataset_paths, setup_opt, build_norm_method, build_inference_transform, load_checkpoint
 from src.transforms import *
 from src.transforms.target_transforms import ClassLabel, VideoID
 from src.transforms.target_transforms import Compose as TargetCompose
@@ -81,45 +81,14 @@ def aggregate_clip_outputs(out_queue: list[np.ndarray], clf_threshold: float) ->
 
 def main():
     opt = parse_opts_offline()
-
-    if opt.dataset == 'jester':
-        root = Path(opt.jester_root_path)
-        opt.video_path      = str(root / opt.jester_video_path)
-        opt.annotation_path = str(root / opt.jester_annotation_path)
-    elif opt.dataset == 'ipn':
-        root = Path(opt.ipn_root_path)
-        opt.video_path      = str(root / opt.ipn_video_path)
-        opt.annotation_path = str(root / opt.ipn_annotation_path)
-
-    opt.scales = [opt.initial_scale]
-    for i in range(1, opt.n_scales):
-        opt.scales.append(opt.scales[-1] * opt.scale_step)
-
-    opt.arch       = f"{opt.model}-{opt.model_depth}"
-    opt.store_name = f"{opt.store_name}_{opt.arch}"
-    opt.mean       = get_mean(opt.norm_value)
-    opt.std        = get_std(opt.norm_value)
-
-    torch.manual_seed(opt.manual_seed)
+    resolve_dataset_paths(opt)
+    setup_opt(opt)
 
     model, parameters = generate_model(opt)
     pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-    # Normalisation
-    if opt.no_mean_norm and not opt.std_norm:
-        norm_method = Normalize([0, 0, 0], [1, 1, 1])
-    elif not opt.std_norm:
-        norm_method = Normalize(opt.mean, [1, 1, 1])
-    else:
-        norm_method = Normalize(opt.mean, opt.std)
-
-    # Transforms
-    spatial_transform = Compose([
-        Scale(112),
-        CenterCrop(112),
-        ToTensor(opt.norm_value),
-        norm_method,
-    ])
+    norm_method = build_norm_method(opt)
+    spatial_transform = build_inference_transform(opt, norm_method)
 
     if opt.true_valid:
         test_batch      = 1
@@ -157,13 +126,7 @@ def main():
 
     # Checkpoint
     if opt.resume_path:
-        print(f"Loading checkpoint: {opt.resume_path}")
-        checkpoint = torch.load(opt.resume_path, weights_only=True)
-        assert opt.arch == checkpoint["arch"], (
-            f"Architecture mismatch: expected {opt.arch}, got {checkpoint['arch']}"
-        )
-        opt.begin_epoch = checkpoint["epoch"]
-        model.load_state_dict(checkpoint["state_dict"])
+        opt.begin_epoch = load_checkpoint(model, opt.resume_path, opt.arch)
 
     # ---------------------------------------------------------------------------
     # Evaluation loop

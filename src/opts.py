@@ -146,7 +146,7 @@ def _add_common_args(parser):
     parser.add_argument('--lr_patience', default=10, type=int,
         help='Patience of ReduceLROnPlateau scheduler')
     parser.add_argument('--momentum', default=0.9, type=float)
-    parser.add_argument('--dampening', default=0.9, type=float)
+    parser.add_argument('--dampening', default=0.0, type=float)
     parser.add_argument('--weight_decay', default=1e-3, type=float)
     parser.add_argument('--nesterov', action='store_true',
         help='Nesterov momentum')

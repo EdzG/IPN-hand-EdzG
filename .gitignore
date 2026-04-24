@@ -49,3 +49,6 @@ opts_clf_*.json
 # --- Results & Logs ---
 results/
 *.log
+
+# Temporary results and reference data
+tmp/

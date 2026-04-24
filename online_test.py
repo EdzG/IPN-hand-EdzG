@@ -12,6 +12,7 @@ from pathlib import Path
 
 from src.opts import parse_opts_online
 from src.model import generate_model, _modify_first_conv_layer
+from src.setup import resolve_dataset_paths, build_norm_method, build_inference_transform, load_checkpoint
 from src.mean import get_mean, get_std
 from src.transforms import *
 from src.transforms.target_transforms import ClassLabel
@@ -60,10 +61,7 @@ def load_models(opt):
         detector, _ = generate_model(opt)
 
         if opt.resume_path:
-            print(f'Loading detector checkpoint: {opt.resume_path}')
-            checkpoint = torch.load(opt.resume_path, weights_only=False)
-            assert opt.arch == checkpoint['arch']
-            detector.load_state_dict(checkpoint['state_dict'])
+            load_checkpoint(detector, opt.resume_path, opt.arch)
 
         print('Detector:\n', detector)
         print('Detector params:', sum(p.numel() for p in detector.parameters() if p.requires_grad))
@@ -87,10 +85,7 @@ def load_models(opt):
     classifier, _ = generate_model(opt)
 
     if opt.resume_path:
-        print(f'Loading classifier checkpoint: {opt.resume_path}')
-        checkpoint = torch.load(opt.resume_path, weights_only=False)
-        assert opt.arch == checkpoint['arch']
-        classifier.load_state_dict(checkpoint['state_dict'])
+        load_checkpoint(classifier, opt.resume_path, opt.arch)
 
     print('Classifier:\n', classifier)
     print('Classifier params:', sum(p.numel() for p in classifier.parameters() if p.requires_grad))
@@ -102,11 +97,7 @@ def main():
     opt = parse_opts_online()
     opt.store_name = f'{opt.store_name}_{opt.dataset}_{opt.model_clf}'
 
-    # Per-dataset path resolution (mirrors offline_test.py)
-    if opt.dataset == 'ipn':
-        root = Path(opt.ipn_root_path)
-        opt.video_path      = str(root / opt.ipn_video_path)
-        opt.annotation_path = str(root / opt.ipn_annotation_path)
+    resolve_dataset_paths(opt)
 
     detector, classifier = load_models(opt)
     sys.stdout.flush()
@@ -118,19 +109,8 @@ def main():
         mp_det = MediaPipeDetector(min_detection_confidence=opt.mediapipe_confidence)
         print(f'[INFO] Using MediaPipe detector (conf≥{opt.mediapipe_confidence})')
 
-    if opt.no_mean_norm and not opt.std_norm:
-        norm_method = Normalize([0, 0, 0], [1, 1, 1])
-    elif not opt.std_norm:
-        norm_method = Normalize(opt.mean, [1, 1, 1])
-    else:
-        norm_method = Normalize(opt.mean, opt.std)
-
-    spatial_transform = Compose([
-        Scale(112),
-        CenterCrop(112),
-        ToTensor(opt.norm_value),
-        norm_method,
-    ])
+    norm_method = build_norm_method(opt)
+    spatial_transform = build_inference_transform(opt, norm_method)
     target_transform = ClassLabel()
 
     # Build list of test video paths
