@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.autograd import Variable
 import math
 from functools import partial
 
@@ -23,14 +22,10 @@ def conv3x3x3(in_planes, out_planes, stride=1):
 
 def downsample_basic_block(x, planes, stride):
     out = F.avg_pool3d(x, kernel_size=1, stride=stride)
-    zero_pads = torch.Tensor(
+    zero_pads = torch.zeros(
         out.size(0), planes - out.size(1), out.size(2), out.size(3),
-        out.size(4)).zero_()
-    if isinstance(out.data, torch.cuda.FloatTensor):
-        zero_pads = zero_pads.cuda()
-
-    out = Variable(torch.cat([out.data, zero_pads], dim=1))
-
+        out.size(4), device=out.device)
+    out = torch.cat([out, zero_pads], dim=1)
     return out
 
 
@@ -38,7 +33,7 @@ class BasicBlock(nn.Module):
     expansion = 1
 
     def __init__(self, inplanes, planes, stride=1, downsample=None):
-        super(BasicBlock, self).__init__()
+        super().__init__()
         self.conv1 = conv3x3x3(inplanes, planes, stride)
         self.bn1 = nn.BatchNorm3d(planes)
         self.relu = nn.ReLU(inplace=True)
@@ -70,7 +65,7 @@ class Bottleneck(nn.Module):
     expansion = 4
 
     def __init__(self, inplanes, planes, stride=1, downsample=None):
-        super(Bottleneck, self).__init__()
+        super().__init__()
         self.conv1 = nn.Conv3d(inplanes, planes, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm3d(planes)
         self.conv2 = nn.Conv3d(
@@ -115,7 +110,7 @@ class ResNetL(nn.Module):
                  shortcut_type='B',
                  num_classes=400):
         self.inplanes = 16
-        super(ResNetL, self).__init__()
+        super().__init__()
         self.conv1 = nn.Conv3d(
             3,
             16,
@@ -143,8 +138,8 @@ class ResNetL(nn.Module):
             if isinstance(m, nn.Conv3d):
                 m.weight = nn.init.kaiming_normal_(m.weight, mode='fan_out')
             elif isinstance(m, nn.BatchNorm3d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
+                nn.init.constant_(m.weight, 1)
+                nn.init.zeros_(m.bias)
 
     def _make_layer(self, block, planes, blocks, shortcut_type, stride=1):
         downsample = None

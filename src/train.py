@@ -1,5 +1,4 @@
 import torch
-from torch.autograd import Variable
 import time
 import os
 import sys
@@ -29,10 +28,7 @@ def train_epoch(epoch, data_loader, model, criterion, optimizer, opt,
         data_time.update(time.time() - end_time)
 
         if not opt.no_cuda:
-            targets = targets.cuda(async=True)
-        inputs = Variable(inputs)
-        targets = Variable(targets)
-        #pdb.set_trace()
+            targets = targets.cuda(non_blocking=True)
         outputs = model(inputs)
         loss = criterion(outputs, targets)
         acc = calculate_accuracy(outputs, targets)

@@ -1,5 +1,4 @@
 import torch
-from torch.autograd import Variable
 import torch.nn.functional as F
 import time
 import os
@@ -41,19 +40,17 @@ def test(data_loader, model, opt, class_names):
         
        
         with torch.no_grad():
-            inputs = Variable(inputs)
-            targets = Variable(targets)
             outputs = model(inputs)
 
             if not opt.no_softmax_in_test:
-                outputs = F.softmax(outputs)
+                outputs = F.softmax(outputs, dim=1)
 
         for j in range(outputs.size(0)):
             if not (i == 0 and j == 0) and targets[j].item() != previous_video_id:
                 calculate_video_results(output_buffer, previous_video_id,
                                         test_results, class_names)
                 output_buffer = []
-            output_buffer.append(outputs[j].data.cpu())
+            output_buffer.append(outputs[j].detach().cpu())
             previous_video_id = targets[j].item()
 
         if (i % 100) == 0:

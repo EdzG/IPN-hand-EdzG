@@ -73,7 +73,7 @@ def generate_model(opt):
     # state_dict key names are consistent regardless of CUDA availability.
     if opt.pretrain_path:
         print(f'loading pretrained model {opt.pretrain_path}')
-        pretrain = torch.load(opt.pretrain_path, map_location='cpu')
+        pretrain = torch.load(opt.pretrain_path, map_location='cpu', weights_only=False)
         assert opt.arch == pretrain['arch']
 
         # Checkpoints are saved after DataParallel wrapping, so keys are

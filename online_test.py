@@ -6,7 +6,6 @@ import csv
 import cv2
 import numpy as np
 import torch
-from torch.autograd import Variable
 from sklearn.metrics import confusion_matrix
 from torch.nn import functional as F
 from pathlib import Path
@@ -203,8 +202,6 @@ def main():
                 targets = targets.cuda(non_blocking=True)
 
             with torch.no_grad():
-                inputs  = Variable(inputs)
-                targets = Variable(targets)
 
                 # --- Detection ---
                 if opt.det_backend == 'mediapipe':
@@ -333,7 +330,8 @@ def main():
         true_classes = []
         true_frames  = []
         true_starts  = []
-        with open('annotation_ipnGesture/vallistall.txt') as csvfile:
+        val_list_path = os.path.join(os.path.dirname(opt.annotation_path), 'vallistall.txt')
+        with open(val_list_path) as csvfile:
             for row in csv.reader(csvfile, delimiter=' '):
                 if row[0][2:] == opt.whole_path and row[1] != '1':
                     true_classes.append(int(row[1]) - 2)

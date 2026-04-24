@@ -6,7 +6,6 @@ See the paper "ShuffleNet V2: Practical Guidelines for Efficient CNN Architectur
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.autograd import Variable
 from collections import OrderedDict
 from torch.nn import init
 import math
@@ -29,7 +28,7 @@ def conv_1x1x1_bn(inp, oup):
 
 def channel_shuffle(x, groups):
     '''Channel shuffle: [N,C,H,W] -> [N,g,C/g,H,W] -> [N,C/g,g,H,w] -> [N,C,H,W]'''
-    batchsize, num_channels, depth, height, width = x.data.size()
+    batchsize, num_channels, depth, height, width = x.size()
     channels_per_group = num_channels // groups
     # reshape
     x = x.view(batchsize, groups, 
@@ -42,7 +41,7 @@ def channel_shuffle(x, groups):
     
 class InvertedResidual(nn.Module):
     def __init__(self, inp, oup, stride):
-        super(InvertedResidual, self).__init__()
+        super().__init__()
         self.stride = stride
         assert stride in [1, 2]
 
@@ -106,7 +105,7 @@ class InvertedResidual(nn.Module):
 
 class ShuffleNetV2(nn.Module):
     def __init__(self, num_classes=600, sample_size=112, width_mult=1.):
-        super(ShuffleNetV2, self).__init__()
+        super().__init__()
         assert sample_size % 16 == 0
         
         self.stage_repeats = [4, 8, 4]
@@ -159,7 +158,7 @@ class ShuffleNetV2(nn.Module):
         out = self.maxpool(out)
         out = self.features(out)
         out = self.conv_last(out)
-        out = F.avg_pool3d(out, out.data.size()[-3:])
+        out = F.avg_pool3d(out, out.size()[-3:])
         out = out.view(out.size(0), -1)
         out = self.classifier(out)
         return out
@@ -202,6 +201,6 @@ if __name__ == "__main__":
     model = nn.DataParallel(model, device_ids=None)
     print(model)
 
-    input_var = Variable(torch.randn(8, 3, 16, 112, 112))
+    input_var = torch.randn(8, 3, 16, 112, 112)
     output = model(input_var)
     print(output.shape)

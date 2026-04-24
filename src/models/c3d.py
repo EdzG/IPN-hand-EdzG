@@ -14,7 +14,7 @@ class C3D(nn.Module):
                  sample_duration,
                  num_classes=400):
 
-        super(C3D, self).__init__()
+        super().__init__()
         self.group1 = nn.Sequential(
             nn.Conv3d(3, 64, kernel_size=3, padding=1),
             nn.ReLU(),

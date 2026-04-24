@@ -1,36 +1,43 @@
 #!/bin/bash
+# Online (sliding-window) evaluation of the full detector+classifier pipeline.
+# Requires both checkpoints produced by the two training scripts:
+#   results_ipn/ipnDet_sc8b64_resnetl-10_best.pth
+#   results_ipn/ipnClf_jes32r_b32_resnext-101_best.pth
+set -e
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 export CUDA_VISIBLE_DEVICES=0
-export PYTHONPATH=$PYTHONPATH:.
+export PYTHONPATH="$REPO_ROOT:$PYTHONPATH"
 
-python online_test.py \
-	--root_path /home/edzz/repos/IPN-hand-EdzG \
-	--video_path datasets/HandGestures/IPN_dataset \
-	--annotation_path annotation_ipnGesture/ipnall.json \
-	--resume_path_det report_ipn/ipnDet_sc8b64_resnetl-10.pth \
-	--resume_path_clf report_ipn/ipnClf_jes32rb32_resnext-101.pth \
-	--result_path results_ipn \
+python "$REPO_ROOT/online_test.py" \
+	--ipn_root_path "$REPO_ROOT" \
+	--ipn_video_path src/datasets/HandGestures/IPN_dataset \
+	--ipn_annotation_path annotation_ipnGesture/ipnall.json \
+	--result_path "$REPO_ROOT/results_ipn" \
 	--dataset ipn \
-	--store_name RGB\
-	--modality_det RGB\
-	--modality_clf RGB\
-	--sample_duration_det 8 \
-	--sample_duration_clf 32 \
+	--det_backend cnn \
+	--resume_path_det "$REPO_ROOT/results_ipn/ipnDet_sc8b64_resnetl-10_best.pth" \
+	--resume_path_clf "$REPO_ROOT/results_ipn/ipnClf_jes32r_b32_resnext-101_best.pth" \
 	--model_det resnetl \
-	--model_clf resnext \
 	--model_depth_det 10 \
-	--model_depth_clf 101 \
 	--resnet_shortcut_det A \
-	--resnet_shortcut_clf B \
-	--batch_size 1 \
 	--n_classes_det 2 \
 	--n_finetune_classes_det 2 \
+	--sample_duration_det 8 \
+	--modality_det RGB \
+	--model_clf resnext \
+	--model_depth_clf 101 \
+	--resnet_shortcut_clf B \
 	--n_classes_clf 13 \
 	--n_finetune_classes_clf 13 \
-	--n_threads 16 \
-	--checkpoint 1 \
+	--sample_duration_clf 32 \
+	--modality_clf RGB \
+	--store_name RGB \
+	--batch_size 1 \
+	--n_threads 4 \
 	--n_val_samples 1 \
 	--train_crop random \
-	--test_subset test  \
+	--test_subset test \
+	--det_backend cnn \
 	--det_strategy ma \
 	--det_queue_size 4 \
 	--det_counter 2 \
@@ -38,4 +45,4 @@ python online_test.py \
 	--clf_queue_size 16 \
 	--clf_threshold_pre 0.15 \
 	--clf_threshold_final 0.15 \
-	--stride_len 1 \
+	--stride_len 1

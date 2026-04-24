@@ -40,18 +40,15 @@ ep_best = 0
 
 if __name__ == '__main__':
     opt = parse_opts_offline()
-    if opt.root_path != '':
-        # Join some given paths with root path 
-        if opt.result_path:
-            opt.result_path = os.path.join(opt.root_path, opt.result_path)
-        if opt.annotation_path:
-            opt.annotation_path = os.path.join(opt.root_path, opt.annotation_path)
-        if opt.resume_path:
-            opt.resume_path = os.path.join(opt.root_path, opt.resume_path)
-        if opt.pretrain_path:
-            opt.pretrain_path = os.path.join(opt.root_path, opt.pretrain_path)
-        if opt.video_path:
-            opt.video_path = os.path.join(opt.root_path, opt.video_path)
+
+    if opt.dataset == 'ipn':
+        root = Path(opt.ipn_root_path)
+        opt.video_path      = str(root / opt.ipn_video_path)
+        opt.annotation_path = str(root / opt.ipn_annotation_path)
+    elif opt.dataset == 'jester':
+        root = Path(opt.jester_root_path)
+        opt.video_path      = str(root / opt.jester_video_path)
+        opt.annotation_path = str(root / opt.jester_annotation_path)
     
     opt.scales = [opt.initial_scale]
     for i in range(1, opt.n_scales):
@@ -181,7 +178,7 @@ if __name__ == '__main__':
     if opt.resume_path:
         print('loading checkpoint {}'.format(opt.resume_path))
         sys.stdout.flush()
-        checkpoint = torch.load(opt.resume_path)
+        checkpoint = torch.load(opt.resume_path, weights_only=False)
         assert opt.arch == checkpoint['arch']
 
         if opt.fine_tuning:

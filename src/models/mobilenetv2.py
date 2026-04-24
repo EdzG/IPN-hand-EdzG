@@ -6,7 +6,6 @@ import torch
 import math
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.autograd import Variable
 
 
 __all__ = ['MobilenetV2', 'mob_v2']
@@ -29,7 +28,7 @@ def conv_1x1x1_bn(inp, oup):
 
 class InvertedResidual(nn.Module):
     def __init__(self, inp, oup, stride, expand_ratio):
-        super(InvertedResidual, self).__init__()
+        super().__init__()
         self.stride = stride
 
         hidden_dim = round(inp * expand_ratio)
@@ -69,7 +68,7 @@ class InvertedResidual(nn.Module):
 
 class MobileNetV2(nn.Module):
     def __init__(self, num_classes=1000, sample_size=224, width_mult=1.):
-        super(MobileNetV2, self).__init__()
+        super().__init__()
         block = InvertedResidual
         input_channel = 32
         last_channel = 1280
@@ -111,7 +110,7 @@ class MobileNetV2(nn.Module):
 
     def forward(self, x):
         x = self.features(x)
-        x = F.avg_pool3d(x, x.data.size()[-3:])
+        x = F.avg_pool3d(x, x.size()[-3:])
         x = x.view(x.size(0), -1)
         x = self.classifier(x)
         return x
@@ -120,16 +119,15 @@ class MobileNetV2(nn.Module):
         for m in self.modules():
             if isinstance(m, nn.Conv3d):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.kernel_size[2] * m.out_channels
-                m.weight.data.normal_(0, math.sqrt(2. / n))
+                nn.init.normal_(m.weight, 0, math.sqrt(2. / n))
                 if m.bias is not None:
-                    m.bias.data.zero_()
+                    nn.init.zeros_(m.bias)
             elif isinstance(m, nn.BatchNorm3d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
+                nn.init.constant_(m.weight, 1)
+                nn.init.zeros_(m.bias)
             elif isinstance(m, nn.Linear):
-                n = m.weight.size(1)
-                m.weight.data.normal_(0, 0.01)
-                m.bias.data.zero_()
+                nn.init.normal_(m.weight, 0, 0.01)
+                nn.init.zeros_(m.bias)
 
 
 def get_fine_tuning_parameters(model, ft_begin_index):
@@ -168,7 +166,7 @@ if __name__ == "__main__":
     print(model)
 
 
-    input_var = Variable(torch.randn(8, 3, 16, 112, 112))
+    input_var = torch.randn(8, 3, 16, 112, 112)
     output = model(input_var)
     print(output.shape)
 

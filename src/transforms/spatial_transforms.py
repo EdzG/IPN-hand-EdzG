@@ -71,7 +71,7 @@ class ToTensor(object):
         elif pic.mode == 'I;16':
             img = torch.from_numpy(np.array(pic, np.int16, copy=False))
         else:
-            img = torch.ByteTensor(torch.ByteStorage.from_buffer(pic.tobytes()))
+            img = torch.from_numpy(np.array(pic, dtype=np.uint8))
         # PIL image mode: 1, L, P, I, F, RGB, YCbCr, RGBA, CMYK
         if pic.mode == 'YCbCr':
             nchannel = 3
@@ -481,7 +481,7 @@ class SaltImage(object):
 
         if self.p < 0.30:
             data_final = []
-            img = img.astype(np.float)
+            img = img.astype(float)
             img_shape = img.shape
             noise = np.random.randint(self.ratio, size=img_shape)
             img = np.where(noise == 0, 255, img)
@@ -510,7 +510,7 @@ class Dropout(object):
 
         if self.p < 0.30:
             data_final = []
-            img = img.astype(np.float)
+            img = img.astype(float)
             img_shape = img.shape
             noise = np.random.randint(self.ratio, size=img_shape)
             img = np.where(noise == 0, 0, img)

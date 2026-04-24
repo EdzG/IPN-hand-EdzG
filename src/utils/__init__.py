@@ -55,6 +55,8 @@ class Queue:
     #Adding elements to queue
     def enqueue(self,data):
         self.queue.insert(0,data)
+        if len(self.queue) > self.max_size:
+            self.queue.pop()
         self.median = self._median()
         self.ma = self._ma()
         self.ewma = self._ewma()
@@ -140,7 +142,7 @@ def calculate_precision(outputs, targets):
 
     _, pred = outputs.topk(1, 1, True)
     pred = pred.t()
-    return  precision_score(targets.view(-1).cpu(), pred.view(-1).cpu(), average = 'macro')
+    return  precision_score(targets.view(-1).cpu(), pred.view(-1).cpu(), average = 'macro', zero_division=0)
 
 
 def calculate_recall(outputs, targets):
@@ -148,4 +150,4 @@ def calculate_recall(outputs, targets):
 
     _, pred = outputs.topk(1, 1, True)
     pred = pred.t()
-    return  recall_score(targets.view(-1).cpu(), pred.view(-1).cpu(), average = 'macro')
+    return  recall_score(targets.view(-1).cpu(), pred.view(-1).cpu(), average = 'macro', zero_division=0)

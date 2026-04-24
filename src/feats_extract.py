@@ -11,7 +11,6 @@ import pandas as pd
 import csv
 import torch
 from torch import nn
-from torch.autograd import Variable
 from sklearn.metrics import confusion_matrix
 from torch.nn import functional as F
 
@@ -77,7 +76,7 @@ def load_models(opt):
 
     if opt.resume_path:
         print('loading checkpoint {}'.format(opt.resume_path))
-        checkpoint = torch.load(opt.resume_path)
+        checkpoint = torch.load(opt.resume_path, weights_only=False)
         assert opt.arch == checkpoint['arch']
         classifier.load_state_dict(checkpoint['state_dict'])
         if opt.sample_duration_clf < 32 and opt.model_clf != 'c3d':
@@ -221,10 +220,8 @@ for idx, path in enumerate(test_paths[buf:]):
 
     for i, (inputs, targets) in enumerate(test_loader):
         if not opt.no_cuda:
-            targets = targets.cuda(async=True)
+            targets = targets.cuda(non_blocking=True)
         with torch.no_grad():
-            inputs = Variable(inputs)
-            targets = Variable(targets)
             if opt.modality_clf == 'RGB':
                 inputs_clf = inputs[:,:-1,:,:,:]
             elif opt.modality_clf == 'Depth':
@@ -253,7 +250,7 @@ for idx, path in enumerate(test_paths[buf:]):
                           test_data.data[i]['segment'][1],
                           feats_time=feats_time))
                 sys.stdout.flush()
-        clf_feats = clf_feats.data.cpu().numpy()
+        clf_feats = clf_feats.detach().cpu().numpy()
         sio.savemat(feat_path, {'feats':clf_feats})
         # with open(feat_path, 'wb') as f:
         #     pickle.dump({'feats': clf_feats}, f, pickle.HIGHEST_PROTOCOL)
