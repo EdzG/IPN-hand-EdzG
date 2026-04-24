@@ -12,7 +12,6 @@ import numpy as np
 import random
 
 from ..utils import load_value_file
-import pdb
 
 
 def pil_loader(path, modality):
@@ -32,7 +31,7 @@ def accimage_loader(path, modality):
         return accimage.Image(path)
     except IOError:
         # Potentially a decoding problem, fall back to PIL.Image
-        return pil_loader(path)
+        return pil_loader(path, modality)
 
 
 def get_default_image_loader():
@@ -225,11 +224,12 @@ class IPN(data.Dataset):
         if self.temporal_transform is not None:
             frame_indices = self.temporal_transform(frame_indices)
         clip = self.loader(path, frame_indices, self.modality, self.sample_duration)
-        oversample_clip =[]
+        if len(clip) < self.sample_duration:
+            clip += [clip[-1]] * (self.sample_duration - len(clip))
         if self.spatial_transform is not None:
             self.spatial_transform.randomize_parameters()
             clip = [self.spatial_transform(img) for img in clip]
-    
+
         im_dim = clip[0].size()[-2:]
         clip = torch.cat(clip, 0).view((self.sample_duration, -1) + im_dim).permute(1, 0, 2, 3)
         

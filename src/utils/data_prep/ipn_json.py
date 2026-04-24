@@ -17,8 +17,8 @@ def convert_csv_to_dict(csv_path, subset, labels):
             basename = parts[0]
             label_idx = int(parts[1]) - 1
             class_name = labels[label_idx]
-            start_frame = parts[2]
-            end_frame = parts[3]
+            start_frame = int(parts[2])
+            end_frame = int(parts[3])
             
             keys.append(basename)
             key_labels.append(class_name)
@@ -66,7 +66,7 @@ def convert_ipn_csv_to_activitynet_json(label_csv_path, train_csv_path, val_csv_
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print("Usage: python utils/ipn_json.py <csv_dir_path>")
+        print("Usage: python src/utils/data_prep/ipn_json.py <csv_dir_path>")
         sys.exit(1)
         
     csv_dir_path = Path(sys.argv[1])
@@ -95,4 +95,4 @@ if __name__ == '__main__':
         print('Successfully wrote to json:', dst_json_path)
 
 # HOW TO RUN:
-# python utils/ipn_json.py ./annotation_ipnGesture
+# python src/utils/data_prep/ipn_json.py ./annotation_ipnGesture
